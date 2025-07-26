@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  Terraform CI:
+  CI:
     runs-on: ubuntu-latest
 
     steps:
