@@ -27,7 +27,7 @@ module "ecs" {
       container_definitions = {
         (local.s3_container_name) = {
           essential = true
-          image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/jaz-s3-service-ecr:latest"
+          image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${local.prefix}-s3-service-ecr:latest"
           port_mappings = [
             {
               containerPort = 5001
@@ -60,7 +60,7 @@ module "ecs" {
       container_definitions = {
         (local.sqs_container_name) = {
           essential = true
-          image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/jaz-sqs-service-ecr:latest"
+          image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${local.prefix}-sqs-service-ecr:latest"
           port_mappings = [
             {
               containerPort = 5002
