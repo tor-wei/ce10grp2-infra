@@ -4,7 +4,7 @@ module "s3_service_sg" {
 
   name        = "${local.prefix}-s3-service-ecs-sg"
   description = "Security group for s3 service"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = module.vpc.vpc_id
 
   ingress_with_cidr_blocks = [
     {
@@ -24,7 +24,7 @@ module "sqs_service_sg" {
 
   name        = "${local.prefix}-sqs-service-ecs-sg"
   description = "Security group for sqs service"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = module.vpc.vpc_id
 
   ingress_with_cidr_blocks = [
     {
