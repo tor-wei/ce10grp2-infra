@@ -11,10 +11,10 @@ module "vpc" {
   enable_vpn_gateway = true
 
   tags = {
-    Terraform = "true"
+    Terraform   = "true"
     Environment = "dev"
-    Created_by = var.created_by
-    Cohort = "CE10"
+    Created_by  = var.created_by
+    Cohort      = "CE10"
   }
 }
 

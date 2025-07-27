@@ -11,7 +11,7 @@ variable "vpc_name" {
 }
 
 variable "created_by" {
-    description = "The name of vpc creator"
-    type        = string
-    default     = "ce10grp2"
+  description = "The name of vpc creator"
+  type        = string
+  default     = "ce10grp2"
 }
