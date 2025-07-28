@@ -1,9 +1,9 @@
 resource "aws_s3_bucket" "s3_service_bucket" {
-  bucket = "${local.prefix}-s3-service-bkt"
+  bucket = "${local.s3_service_name}-bkt"
 }
 
 resource "aws_sqs_queue" "sqs_service_queue" {
-  name = "${local.prefix}-sqs-service-queue"
+  name = "${local.sqs_service_name}-queue"
 }
 
 module "ecs" {
@@ -21,7 +21,7 @@ module "ecs" {
   }
 
   services = {
-    ce10grp2-s3-service = {
+    (local.s3_service_name) = {
       cpu    = 512
       memory = 1024
       container_definitions = {
@@ -37,11 +37,11 @@ module "ecs" {
           environment = [
             {
               name  = "AWS_REGION"
-              value = "ap-southeast-1"
+              value = local.aws_region
             },
             {
               name  = "BUCKET_NAME"
-              value = "${local.prefix}-s3-service-bkt"
+              value = aws_s3_bucket.s3_service_bucket.bucket
             }
           ]
         }
@@ -54,7 +54,7 @@ module "ecs" {
       tasks_iam_role_arn                 = module.s3_service_task_role.iam_role_arn
     }
 
-    ce10grp2-sqs-service = {
+    (local.sqs_service_name) = {
       cpu    = 512
       memory = 1024
       container_definitions = {
@@ -70,11 +70,11 @@ module "ecs" {
           environment = [
             {
               name  = "AWS_REGION"
-              value = "ap-southeast-1"
+              value = local.aws_region
             },
             {
               name  = "QUEUE_URL"
-              value = "${local.prefix}-sqs-service-queue"
+              value = aws_sqs_queue.sqs_service_queue.name
             }
           ]
         }
