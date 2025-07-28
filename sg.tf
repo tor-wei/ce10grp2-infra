@@ -2,7 +2,7 @@ module "s3_service_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 5.1.0"
 
-  name        = "${local.prefix}-s3-service-ecs-sg"
+  name        = "${local.s3_service_name}-ecs-sg"
   description = "Security group for s3 service"
   vpc_id      = module.vpc.vpc_id
 
@@ -22,7 +22,7 @@ module "sqs_service_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 5.1.0"
 
-  name        = "${local.prefix}-sqs-service-ecs-sg"
+  name        = "${local.sqs_service_name}-ecs-sg"
   description = "Security group for sqs service"
   vpc_id      = module.vpc.vpc_id
 
