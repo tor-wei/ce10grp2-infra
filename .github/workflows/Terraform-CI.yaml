@@ -3,13 +3,18 @@ name: Terraform CI
 on:
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   CI:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./eks
 
     permissions:
       id-token: write   # This is required for requesting the JWT
+      contents: read
 
     steps:
     - name: Checkout
@@ -30,6 +35,11 @@ jobs:
 
     - name: Terraform Init
       run: terraform init
+
+    - name: Terraform Workspace
+      run: |
+        terraform workspace select -or-create dev
+        terraform workspace list
        
     - name: Terraform Validate
       run: terraform validate
@@ -48,4 +58,4 @@ jobs:
       run: tflint -f compact
    
     - name: Terraform Plan
-      run: terraform plan
+      run: terraform plan -var-file=dev.tfvars
