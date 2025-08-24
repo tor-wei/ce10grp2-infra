@@ -57,3 +57,41 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
+
+      - name: Capture Terraform Outputs
+        id: terraform_outputs
+        run: |
+          echo "CLUSTER_NAME=$(terraform output -raw cluster_name)" >> $GITHUB_ENV
+          echo "CLUSTER_ENDPOINT=$(terraform output -raw cluster_endpoint)" >> $GITHUB_ENV
+
+      - name: Setup Kubeconfig
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+
+      - name: Update aws-auth ConfigMap with IAM User ARNs
+        run: |
+          set -x  # Enable shell debugging
+
+          # Convert the environment variable to an array
+          IFS=',' read -r -a IAM_USER_ARNS <<< "$IAM_USER_ARNS"
+
+          # Loop through the IAM user ARNs and update aws-auth
+          for arn in "${IAM_USER_ARNS[@]}"; do
+            echo "Adding ARN: $arn to aws-auth"
+            
+            # Print out the ARN and the extracted username for debugging
+            echo "ARN: $arn"
+            echo "Username: ${arn##*/}"
+            
+            # Get the existing ConfigMap and modify it with yq
+            kubectl get configmap aws-auth -n kube-system -o yaml -v=9 | \
+              yq eval ".data.mapUsers += \"- userarn: $arn\n  username: ${arn##*/}\n  groups:\n    - system:masters\n\"" > modified_aws_auth.yaml
+
+            # Print the modified YAML to verify changes before applying
+            echo "Modified aws-auth ConfigMap:"
+            cat modified_aws_auth.yaml
+
+            # Apply the updated ConfigMap
+            kubectl apply -f modified_aws_auth.yaml
+          done
+        env:
+          IAM_USER_ARNS: ${{ secrets.IAM_USER_ARNS }}
