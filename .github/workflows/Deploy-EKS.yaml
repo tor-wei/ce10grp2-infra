@@ -7,9 +7,9 @@ on:
         type: choice
         description: Select the environment
         options:
-        - dev
-        - uat
-        - prod
+          - dev
+          - uat
+          - prod
 
 env:
   AWS_REGION: ap-southeast-1
@@ -22,7 +22,7 @@ jobs:
         working-directory: ./eks
 
     permissions:
-      id-token: write   # This is required for requesting the JWT
+      id-token: write # This is required for requesting the JWT
       contents: read
 
     steps:
@@ -57,3 +57,15 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
+
+      # --- upgrade storage class from v2 to v3 ---
+      - name: Apply Kubernetes Manifests
+        run: |
+          # The cluster_name variable should match what is defined in your .tfvars file
+          CLUSTER_NAME=$(grep 'cluster_name' ${{ github.event.inputs.environment }}.tfvars | awk -F'"' '{print $2}')
+
+          echo "Syncing kubeconfig for cluster: $CLUSTER_NAME"
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ env.AWS_REGION }}
+
+          echo "Applying StorageClass manifest..."
+          kubectl apply -f ./cluster-configs/storageclass.yaml
