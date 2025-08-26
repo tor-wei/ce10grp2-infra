@@ -1,4 +1,4 @@
-name: Deploy EKS Cluster
+name: Deploy Infrastructure
 
 on:
   workflow_dispatch:
@@ -11,23 +11,20 @@ on:
         - uat
         - prod
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   AWS_REGION: ap-southeast-1
 
 jobs:
-  terraform-create-eks-cluster:
+  terraform-deploy-infrastructure:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./eks
-
-    permissions:
-      id-token: write   # This is required for requesting the JWT
-      contents: read
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -37,35 +34,72 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
 
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Workspace
+      - name: Deploy VPC
+        working-directory: ./vpc
         run: |
+          terraform init
           terraform workspace select -or-create ${{ github.event.inputs.environment }}
           terraform workspace list
+          terraform validate
+          terraform plan -var-file=${{ github.event.inputs.environment }}.tfvars
+          terraform apply -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
 
-      - name: Terraform Validate
-        run: terraform validate
+      - name: Capture VPC Outputs
+        working-directory: ./vpc
+        run: |
+          echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV
 
-      - name: Terraform Plan
-        run: terraform plan -var-file=${{ github.event.inputs.environment }}.tfvars
+      - name: Deploy ECR
+        working-directory: ./ecr
+        run: |
+          terraform init
+          terraform workspace select -or-create ${{ github.event.inputs.environment }}
+          terraform workspace list
+          terraform validate
+          terraform plan
+          terraform apply --auto-approve
 
-      - name: Terraform Apply
-        run: terraform apply -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
+      - name: Deploy EKS
+        working-directory: ./eks
+        env:
+          TF_VAR_vpc_id: ${{ env.VPC_ID }}
+        run: |
+          terraform init
+          terraform workspace select -or-create ${{ github.event.inputs.environment }}
+          terraform workspace list
+          terraform validate
+          terraform plan -var-file=${{ github.event.inputs.environment }}.tfvars
+          terraform apply -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
 
-      - name: Capture Terraform Outputs
-        id: terraform_outputs
+      - name: Capture EKS Outputs
+        working-directory: ./eks
         run: |
           echo "CLUSTER_NAME=$(terraform output -raw cluster_name)" >> $GITHUB_ENV
           echo "CLUSTER_ENDPOINT=$(terraform output -raw cluster_endpoint)" >> $GITHUB_ENV
 
+      - name: Deploy Kubernetes Resources
+        working-directory: ./k8s
+        env:
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_cluster_name: ${{ env.CLUSTER_NAME }}
+        run: |
+          terraform init
+          terraform workspace select -or-create ${{ github.event.inputs.environment }}
+          terraform workspace list
+          terraform validate
+          terraform plan
+          terraform apply --auto-approve
+
       - name: Setup Kubeconfig
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
+
+      - name: Delete gp2 Storage Class
+        run: kubectl delete storageclass gp2
+        continue-on-error: true
 
       - name: Update aws-auth ConfigMap with IAM User ARNs
         run: |

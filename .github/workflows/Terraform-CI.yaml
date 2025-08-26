@@ -2,60 +2,33 @@ name: Terraform CI
 
 on:
   pull_request:
-    branches: [ "main" ]
+    paths:
+      - 'vpc/**'
+      - 'ecr/**'
+      - 'eks/**'
+      - 'k8s/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  CI:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./eks
+  check-vpc:
+    uses: ./.github/workflows/Terraform-Check.yaml
+    with:
+      working_directory: 'vpc'
 
-    permissions:
-      id-token: write   # This is required for requesting the JWT
-      contents: read
+  check-ecr:
+    uses: ./.github/workflows/Terraform-Check.yaml
+    with:
+      working_directory: 'ecr'
 
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-   
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-        role-session-name: ${{ github.run_id }}
-        aws-region: ap-southeast-1
+  check-eks:
+    uses: ./.github/workflows/Terraform-Check.yaml
+    with:
+      working_directory: 'eks'
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-
-    - name: Terraform fmt
-      run: terraform fmt -check
-
-    - name: Terraform Init
-      run: terraform init
-
-    - name: Terraform Workspace
-      run: |
-        terraform workspace select -or-create dev
-        terraform workspace list
-       
-    - name: Terraform Validate
-      run: terraform validate
-
-    - uses: terraform-linters/setup-tflint@v3
-      with:
-        tflint_version: latest
-   
-    - name: Show version
-      run: tflint --version
-
-    - name: Init TFLint
-      run: tflint --init
-
-    - name: Run TFLint
-      run: tflint -f compact
-   
-    - name: Terraform Plan
-      run: terraform plan -var-file=dev.tfvars
+  check-kubernetes:
+    uses: ./.github/workflows/Terraform-Check.yaml
+    with:
+      working_directory: 'k8s'
