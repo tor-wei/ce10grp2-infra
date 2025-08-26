@@ -3,12 +3,16 @@ variable "env" {
   type        = string
 }
 variable "region" {
-  description = "The AWS region for this infra"
-  type        = string
+  type = string
+}
+variable "name_prefix" {
+  type = string
+}
+variable "vpc_id" {
+  type = string
 }
 variable "eks_node_instance_type" {
-  description = "Instance type of the EC2 running as node"
-  type        = string
+  type = string
 }
 variable "eks_node_min_size" {
   type = number
