@@ -53,10 +53,6 @@ jobs:
         run: |
           echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV
 
-      - name: Test Output
-        run: |
-          echo "VPC Subnet IDs (from env): ${{ env.PRIVATE_SUBNETS }}"
-
       - name: Deploy ECR
         working-directory: ./ecr
         run: |
