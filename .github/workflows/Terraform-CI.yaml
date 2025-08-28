@@ -3,32 +3,27 @@ name: Terraform CI
 on:
   pull_request:
     paths:
-      - 'vpc/**'
       - 'ecr/**'
       - 'eks/**'
-      - 'k8s/**'
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
-  check-vpc:
-    uses: ./.github/workflows/Terraform-Check.yaml
-    with:
-      working_directory: 'vpc'
-
   check-ecr:
     uses: ./.github/workflows/Terraform-Check.yaml
     with:
       working_directory: 'ecr'
+      region: ${{ vars.AWS_REGION }}
+    secrets:
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
   check-eks:
     uses: ./.github/workflows/Terraform-Check.yaml
     with:
       working_directory: 'eks'
-
-  check-kubernetes:
-    uses: ./.github/workflows/Terraform-Check.yaml
-    with:
-      working_directory: 'k8s'
+      region: ${{ vars.AWS_REGION }}
+    secrets:
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}

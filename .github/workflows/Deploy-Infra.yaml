@@ -7,16 +7,15 @@ on:
         type: choice
         description: Select the environment
         options:
-        - dev
-        - uat
+        - dev-uat
         - prod
 
 permissions:
   id-token: write
   contents: read
-
+  
 env:
-  AWS_REGION: ap-southeast-1
+  AWS_REGION: ${{ vars.AWS_REGION }}
 
 jobs:
   terraform-deploy-infrastructure:
@@ -38,21 +37,6 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - name: Deploy VPC
-        working-directory: ./vpc
-        run: |
-          terraform init
-          terraform workspace select -or-create ${{ github.event.inputs.environment }}
-          terraform workspace list
-          terraform validate
-          terraform plan -var-file=${{ github.event.inputs.environment }}.tfvars
-          terraform apply -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
-
-      - name: Capture VPC Outputs
-        working-directory: ./vpc
-        run: |
-          echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV
-
       - name: Deploy ECR
         working-directory: ./ecr
         run: |
@@ -60,20 +44,47 @@ jobs:
           terraform workspace select -or-create ${{ github.event.inputs.environment }}
           terraform workspace list
           terraform validate
-          terraform plan
-          terraform apply --auto-approve
+          terraform plan -var-file=env/${{ github.event.inputs.environment }}.tfvars
+          terraform apply -var-file=env/${{ github.event.inputs.environment }}.tfvars --auto-approve
+
+      - name: Create eks-access.tfvars file For EKS Access Control
+        working-directory: ./eks
+        shell: bash
+        run: |
+          echo 'eks_admin_users = [' > eks-access.tfvars
+          IFS=',' read -ra USERS <<< "${EKS_ADMIN_USERS}"
+          for user in "${USERS[@]}"; do
+            echo "  \"${user}\"," >> eks-access.tfvars
+          done
+          echo ']' >> eks-access.tfvars
+
+          echo 'eks_developer_users = [' >> eks-access.tfvars
+          IFS=',' read -ra DEV_USERS <<< "${EKS_DEVELOPER_USERS}"
+          for user in "${DEV_USERS[@]}"; do
+            echo "  \"${user}\"," >> eks-access.tfvars
+          done
+          echo ']' >> eks-access.tfvars
+
+          echo 'eks_allowed_namespaces = [' >> eks-access.tfvars
+          IFS=',' read -ra NS <<< "${EKS_ALLOWED_NAMESPACES}"
+          for ns in "${NS[@]}"; do
+            echo "  \"${ns}\"," >> eks-access.tfvars
+          done
+          echo ']' >> eks-access.tfvars
+        env:
+          EKS_ADMIN_USERS: ${{ vars.EKS_ADMIN_USERS }}
+          EKS_DEVELOPER_USERS: ${{ vars.EKS_DEVELOPER_USERS }}
+          EKS_ALLOWED_NAMESPACES: ${{ vars.EKS_ALLOWED_NAMESPACES }}
 
       - name: Deploy EKS
         working-directory: ./eks
-        env:
-          TF_VAR_vpc_id: ${{ env.VPC_ID }}
         run: |
           terraform init
           terraform workspace select -or-create ${{ github.event.inputs.environment }}
           terraform workspace list
           terraform validate
-          terraform plan -var-file=${{ github.event.inputs.environment }}.tfvars
-          terraform apply -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
+          terraform plan -var-file=env/${{ github.event.inputs.environment }}.tfvars -var-file=eks-access.tfvars
+          terraform apply -var-file=env/${{ github.event.inputs.environment }}.tfvars -var-file=eks-access.tfvars --auto-approve
 
       - name: Capture EKS Outputs
         working-directory: ./eks
@@ -81,51 +92,10 @@ jobs:
           echo "CLUSTER_NAME=$(terraform output -raw cluster_name)" >> $GITHUB_ENV
           echo "CLUSTER_ENDPOINT=$(terraform output -raw cluster_endpoint)" >> $GITHUB_ENV
 
-      - name: Deploy Kubernetes Resources
-        working-directory: ./k8s
-        env:
-          TF_VAR_region: ${{ env.AWS_REGION }}
-          TF_VAR_cluster_name: ${{ env.CLUSTER_NAME }}
-        run: |
-          terraform init
-          terraform workspace select -or-create ${{ github.event.inputs.environment }}
-          terraform workspace list
-          terraform validate
-          terraform plan
-          terraform apply --auto-approve
-
       - name: Setup Kubeconfig
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
 
-      - name: Delete gp2 Storage Class
-        run: kubectl delete storageclass gp2
-        continue-on-error: true
-
-      - name: Update aws-auth ConfigMap with IAM User ARNs
+      - name: Setup Cluster Configs
         run: |
-          set -x  # Enable shell debugging
-
-          # Convert the environment variable to an array
-          IFS=',' read -r -a IAM_USER_ARNS <<< "$IAM_USER_ARNS"
-
-          # Loop through the IAM user ARNs and update aws-auth
-          for arn in "${IAM_USER_ARNS[@]}"; do
-            echo "Adding ARN: $arn to aws-auth"
-            
-            # Print out the ARN and the extracted username for debugging
-            echo "ARN: $arn"
-            echo "Username: ${arn##*/}"
-            
-            # Get the existing ConfigMap and modify it with yq
-            kubectl get configmap aws-auth -n kube-system -o yaml -v=9 | \
-              yq eval ".data.mapUsers += \"- userarn: $arn\n  username: ${arn##*/}\n  groups:\n    - system:masters\n\"" > modified_aws_auth.yaml
-
-            # Print the modified YAML to verify changes before applying
-            echo "Modified aws-auth ConfigMap:"
-            cat modified_aws_auth.yaml
-
-            # Apply the updated ConfigMap
-            kubectl apply -f modified_aws_auth.yaml
-          done
-        env:
-          IAM_USER_ARNS: ${{ secrets.IAM_USER_ARNS }}
+          echo "Applying StorageClass manifest..."
+          kubectl apply -f ./k8s/cluster-configs/storageclass.yaml

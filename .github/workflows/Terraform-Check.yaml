@@ -6,9 +6,19 @@ on:
       working_directory:
         required: true
         type: string
-        
+      region:
+        required: true
+        type: string
+    secrets:
+      AWS_ROLE_TO_ASSUME:
+        required: true
+
 permissions:
+  id-token: write
   contents: read
+
+env:
+  AWS_REGION: ${{ inputs.region }}
 
 jobs:
   terraform-checks:
@@ -21,6 +31,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: github-run-id-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -28,10 +45,7 @@ jobs:
         run: terraform fmt -check
 
       - name: Terraform Init
-        run: terraform init -backend=false
-
-      - name: Terraform Validate
-        run: terraform validate
+        run: terraform init
 
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
@@ -46,3 +60,9 @@ jobs:
 
       - name: Run TFLint
         run: tflint -f compact
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=env/dev-uat.tfvars

@@ -7,8 +7,7 @@ on:
         type: choice
         description: Select the environment
         options:
-        - dev
-        - uat
+        - dev-uat
         - prod
 
 permissions:
@@ -16,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: ap-southeast-1
+  AWS_REGION: ${{ vars.AWS_REGION }}
 
 jobs:
   terraform-destroy-infrastructure:
@@ -38,40 +37,19 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - name: Terraform Init and Capture Output
+      - name: Terraform Init
         run: |
-          cd vpc && terraform init && terraform workspace select -or-create ${{ github.event.inputs.environment }}
-          echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV
-          cd ../ecr && terraform init && terraform workspace select -or-create ${{ github.event.inputs.environment }}
+          cd ecr && terraform init && terraform workspace select -or-create ${{ github.event.inputs.environment }}
           cd ../eks && terraform init && terraform workspace select -or-create ${{ github.event.inputs.environment }}
-          echo "CLUSTER_NAME=$(terraform output -raw cluster_name)" >> $GITHUB_ENV
-          cd ../k8s && terraform init && terraform workspace select -or-create ${{ github.event.inputs.environment }}
-
-      - name: Destroy Kubernetes Resources
-        working-directory: ./k8s
-        env:
-          TF_VAR_region: ${{ env.AWS_REGION }}
-          TF_VAR_cluster_name: ${{ env.CLUSTER_NAME }}
-        run: | 
-          terraform plan -destroy
-          terraform destroy --auto-approve
 
       - name: Destroy EKS
         working-directory: ./eks
-        env:
-          TF_VAR_vpc_id: ${{ env.VPC_ID }}
         run: |
-          terraform plan -destroy -var-file=${{ github.event.inputs.environment }}.tfvars
-          terraform destroy -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
+          terraform plan -destroy -var-file=env/${{ github.event.inputs.environment }}.tfvars
+          terraform destroy -var-file=env/${{ github.event.inputs.environment }}.tfvars --auto-approve
 
       - name: Destroy ECR
         working-directory: ./ecr
         run: |
-          terraform plan -destroy
-          terraform destroy --auto-approve
-
-      - name: Destroy VPC
-        working-directory: ./vpc
-        run: |
-          terraform plan -var-file=${{ github.event.inputs.environment }}.tfvars
-          terraform destroy -var-file=${{ github.event.inputs.environment }}.tfvars --auto-approve
+          terraform plan -destroy -var-file=env/${{ github.event.inputs.environment }}.tfvars
+          terraform destroy -var-file=env/${{ github.event.inputs.environment }}.tfvars --auto-approve
