@@ -8,9 +8,6 @@ variable "region" {
 variable "name_prefix" {
   type = string
 }
-variable "vpc_id" {
-  type = string
-}
 variable "eks_node_instance_type" {
   type = string
 }
@@ -22,4 +19,19 @@ variable "eks_node_max_size" {
 }
 variable "eks_node_desired_size" {
   type = number
+}
+variable "eks_admin_users" {
+  description = "A list of existing IAM user names to grant cluster-admin access."
+  type        = list(string)
+  default     = []
+}
+variable "eks_developer_users" {
+  description = "A list of existing IAM user names to grant developer access."
+  type        = list(string)
+  default     = []
+}
+variable "eks_allowed_namespaces" {
+  description = "A list of namespaces to grant developers access to."
+  type        = list(string)
+  default     = []
 }

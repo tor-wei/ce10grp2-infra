@@ -1,14 +1,13 @@
-data "aws_vpc" "selected" {
-  id = var.vpc_id
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
-data "aws_subnets" "private_subnets" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.selected.id]
-  }
-  filter {
-    name   = "tag:type"
-    values = ["private"]
-  }
+data "aws_iam_user" "admin_users" {
+  for_each  = toset(var.eks_admin_users)
+  user_name = each.value
+}
+
+data "aws_iam_user" "developer_users" {
+  for_each  = toset(var.eks_developer_users)
+  user_name = each.value
 }
