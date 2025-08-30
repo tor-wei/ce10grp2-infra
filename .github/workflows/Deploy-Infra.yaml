@@ -47,35 +47,6 @@ jobs:
           terraform plan -var-file=env/${{ github.event.inputs.environment }}.tfvars
           terraform apply -var-file=env/${{ github.event.inputs.environment }}.tfvars --auto-approve
 
-      - name: Create eks-access.tfvars file For EKS Access Control
-        working-directory: ./eks
-        shell: bash
-        run: |
-          echo 'eks_admin_users = [' > eks-access.tfvars
-          IFS=',' read -ra USERS <<< "${EKS_ADMIN_USERS}"
-          for user in "${USERS[@]}"; do
-            echo "  \"${user}\"," >> eks-access.tfvars
-          done
-          echo ']' >> eks-access.tfvars
-
-          echo 'eks_developer_users = [' >> eks-access.tfvars
-          IFS=',' read -ra DEV_USERS <<< "${EKS_DEVELOPER_USERS}"
-          for user in "${DEV_USERS[@]}"; do
-            echo "  \"${user}\"," >> eks-access.tfvars
-          done
-          echo ']' >> eks-access.tfvars
-
-          echo 'eks_allowed_namespaces = [' >> eks-access.tfvars
-          IFS=',' read -ra NS <<< "${EKS_ALLOWED_NAMESPACES}"
-          for ns in "${NS[@]}"; do
-            echo "  \"${ns}\"," >> eks-access.tfvars
-          done
-          echo ']' >> eks-access.tfvars
-        env:
-          EKS_ADMIN_USERS: ${{ vars.EKS_ADMIN_USERS }}
-          EKS_DEVELOPER_USERS: ${{ vars.EKS_DEVELOPER_USERS }}
-          EKS_ALLOWED_NAMESPACES: ${{ vars.EKS_ALLOWED_NAMESPACES }}
-
       - name: Deploy EKS
         working-directory: ./eks
         run: |
@@ -83,8 +54,8 @@ jobs:
           terraform workspace select -or-create ${{ github.event.inputs.environment }}
           terraform workspace list
           terraform validate
-          terraform plan -var-file=env/${{ github.event.inputs.environment }}.tfvars -var-file=eks-access.tfvars
-          terraform apply -var-file=env/${{ github.event.inputs.environment }}.tfvars -var-file=eks-access.tfvars --auto-approve
+          terraform plan -var-file=env/${{ github.event.inputs.environment }}.tfvars
+          terraform apply -var-file=env/${{ github.event.inputs.environment }}.tfvars --auto-approve
 
       - name: Capture EKS Outputs
         working-directory: ./eks
