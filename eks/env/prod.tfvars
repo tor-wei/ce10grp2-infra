@@ -8,3 +8,5 @@ eks_node_desired_size  = 3
 eks_admin_users        = ["torwei.goh", "leoeric", "zacharykwek15"]
 eks_developer_users    = ["aliasgharsh53", "mpatra93"]
 eks_allowed_namespaces = ["lingo-game-prod"]
+app_api_ecr_name       = "ce10grp2-app/api"
+app_frontend_ecr_name  = "ce10grp2-app/frontend"
