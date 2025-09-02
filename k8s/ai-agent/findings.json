@@ -1,21 +1,7 @@
 {
   "provider": "",
   "errors": null,
-  "status": "ProblemDetected",
-  "problems": 1,
-  "results": [
-    {
-      "kind": "Service",
-      "name": "argocd/argocd-redis",
-      "error": [
-        {
-          "Text": "Service argocd/argocd-redis has event Cluster IP [IPv4]: 10.100.43.38 is not allocated; repairing",
-          "KubernetesDoc": "",
-          "Sensitive": null
-        }
-      ],
-      "details": "",
-      "parentObject": ""
-    }
-  ]
+  "status": "OK",
+  "problems": 0,
+  "results": null
 }
