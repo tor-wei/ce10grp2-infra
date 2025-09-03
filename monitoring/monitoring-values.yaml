@@ -1,0 +1,47 @@
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelector:
+      matchExpressions:
+        - key: team
+          operator: In
+          values:
+            - myApp
+    namespaceSelector:
+      matchNames:
+        - ce10grp2-dev
+        - ce10grp2-uat
+        - ce10grp2-prod    
+        - kube-system     
+        
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3-immediate
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+  service:
+    type: LoadBalancer
+    annotations: 
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: /
+
+prometheus-node-exporter:
+  enabled: true
+  prometheus:
+    monitor:
+      enabled: true
+      additionalLabels:
+        team: myApp
+
+grafana:
+  adminUser: admin
+  adminPassword: YourSecurePassword
+  persistence:
+    enabled: true
+    storageClassName: gp3-csi
+    size: 10Gi
+  service:
+    type: LoadBalancer
