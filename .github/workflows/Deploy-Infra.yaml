@@ -133,7 +133,7 @@ jobs:
             --set serviceAccount.create=true \
             --set serviceAccount.name=external-dns-sa \
             --set txtOwnerId=torwei-cluster \
-            --set rbac.create=true
+            --set rbac.create=true \
             --set policy=sync
 
   install-argo-cd:
