@@ -129,7 +129,7 @@ jobs:
             --namespace external-dns \
             --create-namespace \
             --set provider.name=aws \
-            --set provider.aws.zoneType=public
+            --set provider.aws.zoneType=public \
             --set serviceAccount.create=true \
             --set serviceAccount.name=external-dns-sa \
             --set txtOwnerId=torwei-cluster \
