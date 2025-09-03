@@ -162,47 +162,44 @@ jobs:
             --namespace argocd --create-namespace \
             --version 7.4.5
 
-install-prometheus-grafana:
-  runs-on: ubuntu-latest
-  needs: [terraform-deploy-infrastructure, install-nginx-ingress-controller, install-external-dns]
-  env:
-    AWS_REGION: ${{ env.AWS_REGION }}
-    MONITORING_NAMESPACE: monitoring
-    APP_NAMESPACES: ce10grp2-dev,ce10grp2-uat,ce10grp2-prod
 
-  steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-        role-session-name: github-run-id-${{ github.run_id }}
-        aws-region: ${{ env.AWS_REGION }}
+  install-prometheus-grafana:
+    runs-on: ubuntu-latest
+    needs: [terraform-deploy-infrastructure, install-nginx-ingress-controller, install-external-dns]
+    env:
+      AWS_REGION: ${{ env.AWS_REGION }}
+      MONITORING_NAMESPACE: monitoring
+      APP_NAMESPACES: ce10grp2-dev,ce10grp2-uat,ce10grp2-prod
 
-    - name: Setup Kubeconfig
-      run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ needs.terraform-deploy-infrastructure.outputs.cluster_name }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: github-run-id-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Helm tool installer
-      uses: Azure/setup-helm@v4.3.1
+      - name: Setup Kubeconfig
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ needs.terraform-deploy-infrastructure.outputs.cluster_name }}
 
-    - name: Deploy ServiceMonitors for all apps
-      run: |
-        IFS=',' read -ra NAMESPACES <<< "$APP_NAMESPACES"
-        for ns in "${NAMESPACES[@]}"; do
-          echo "Deploying ServiceMonitor for namespace $ns"
-          kubectl apply -f ./apps/$ns/servicemonitor.yaml -n $ns
-        done
+      - name: Helm tool installer
+        uses: Azure/setup-helm@v4.3.1
 
-    - name: Apply StorageClass & Monitoring Namespace
-      run: |
-        kubectl apply -f ./monitoring/gp3-storageclass.yaml   
+      - name: Deploy ServiceMonitors for all apps
+        run: |
+          IFS=',' read -ra NAMESPACES <<< "$APP_NAMESPACES"
+          for ns in "${NAMESPACES[@]}"; do
+            echo "Deploying ServiceMonitor for namespace $ns"
+            kubectl apply -f ./apps/$ns/servicemonitor.yaml -n $ns
+          done
 
-    - name: Install kube-prometheus-stack
-      run: |
-        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-        helm repo update
-        helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-          --namespace $MONITORING_NAMESPACE --create-namespace \
-          -f ./monitoring/monitoring-values.yaml
+      - name: Install kube-prometheus-stack
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+          helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+            --namespace $MONITORING_NAMESPACE --create-namespace \
+            -f ./monitoring/monitoring-values.yaml
 
-    - name: Install Loki + Promtail
-      run: kubectl apply -f ./monitoring/loki-promtail.yaml
+      - name: Install Loki + Promtail
+        run: kubectl apply -f ./monitoring/loki-promtail.yaml
