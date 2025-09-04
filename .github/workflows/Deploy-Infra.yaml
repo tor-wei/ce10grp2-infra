@@ -189,7 +189,8 @@ jobs:
           helm repo update
           helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
             --namespace $MONITORING_NAMESPACE --create-namespace \
-            -f ./monitoring/monitoring-values.yaml
+            -f ./monitoring/monitoring-values.yaml \
+            --set grafana.adminPassword=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
 
       - name: Install Loki + Promtail
         run: kubectl apply -f ./monitoring/loki-promtail.yaml
