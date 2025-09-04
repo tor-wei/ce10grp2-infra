@@ -38,7 +38,7 @@ prometheus-node-exporter:
 
 grafana:
   adminUser: admin
-  adminPassword: YourSecurePassword
+  adminPassword: YourSecurePassword #change it 
   persistence:
     enabled: true
     storageClassName: gp3-csi
