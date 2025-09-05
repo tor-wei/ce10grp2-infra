@@ -1,0 +1,7 @@
+server:
+  ingress:
+    enabled: true
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: "argocd-dev-uat.ce10grp2.sctp-sandbox.com"
+    hostname: "argocd-dev-uat.ce10grp2.sctp-sandbox.com"
+    ingressClassName: "nginx"
