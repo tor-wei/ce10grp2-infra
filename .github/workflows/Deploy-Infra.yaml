@@ -21,8 +21,8 @@ jobs:
   terraform-deploy-infrastructure:
     runs-on: ubuntu-latest
     outputs:
-      cluster_name: ${{ steps.terraform-output.outputs.CLUSTER_NAME }}
-      cluster_endpoint: ${{ steps.terraform-output.outputs.CLUSTER_ENDPOINT }}
+      cluster_name: ${{ steps.terraform-output.outputs.cluster_name }}
+      cluster_endpoint: ${{ steps.terraform-output.outputs.cluster_endpoint }}
 
     steps:
       - name: Checkout
@@ -141,6 +141,9 @@ jobs:
     needs: [terraform-deploy-infrastructure, install-nginx-ingress-controller, install-external-dns]
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -155,12 +158,35 @@ jobs:
         uses: Azure/setup-helm@v4.3.1
 
       - name: Install ArgoCD
+        working-directory: ./k8s/argocd
         run: |
           helm repo add argo https://argoproj.github.io/argo-helm
           helm repo update
           helm upgrade --install argocd argo/argo-cd \
             --namespace argocd --create-namespace \
-            --version 7.4.5
+            --values values-${{ github.event.inputs.environment }}.yaml
+
+      - name: Checkout GitOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GITOPS_REPO }}
+          path: gitops-repo
+          ref: ${{ vars.GITOPS_REPO_BRANCH }}
+
+      - name: Setup app for dev and uat environment
+        if: ${{ github.event.inputs.environment == 'dev-uat' }}
+        run: |
+          echo "Applying dev and uat manifests"
+          kubectl apply -f gitops-repo/argocd/dev-app.yaml
+          kubectl apply -f gitops-repo/argocd/uat-app.yaml
+          echo "Successfully applied dev-uat changes."
+
+      - name: Setup app for prod environment
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        run: |
+          echo "Applying prod manifests"
+          kubectl apply -f gitops-repo/argocd/prod-app.yaml
+          echo "Successfully applied production changes."
 
   install-prometheus-grafana:
     runs-on: ubuntu-latest

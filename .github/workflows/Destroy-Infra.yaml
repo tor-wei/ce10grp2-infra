@@ -18,8 +18,108 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION }}
 
 jobs:
+  terraform-capture-output:
+    runs-on: ubuntu-latest
+    outputs:
+      cluster_name: ${{ steps.terraform-output.outputs.cluster_name }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: github-run-id-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Capture EKS Outputs
+        id: terraform-output
+        continue-on-error: true
+        working-directory: ./eks
+        run: |
+          terraform init
+          terraform workspace select -or-create ${{ github.event.inputs.environment }}
+          terraform workspace list
+
+          # Get the JSON output from Terraform. Use -no-color to avoid ANSI escape sequences
+          TF_OUTPUT_JSON=$(terraform output -json -no-color || true)
+
+          # Use jq to extract the 'cluster_name' value.
+          # The -r flag removes surrounding quotes from the output.
+          # The || echo "" ensures a blank string is returned if jq finds nothing.
+          cluster_name=$(echo "$TF_OUTPUT_JSON" | jq -r '.cluster_name.value // ""')
+          echo "cluster_name is $cluster_name"
+
+          # Set the step output variable.
+          # A conditional check could also be added here if needed, but the jq logic is robust.
+          echo "cluster_name=$cluster_name" >> "$GITHUB_OUTPUT"
+
+  uninstall-helm-charts:
+    runs-on: ubuntu-latest
+    needs: [terraform-capture-output]
+    if: ${{ needs.terraform-capture-output.outputs.cluster_name != '' }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: github-run-id-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Kubeconfig
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ needs.terraform-capture-output.outputs.cluster_name }}
+
+      - name: Helm tool installer
+        uses: Azure/setup-helm@v4.3.1
+
+      - name: Uninstall Helm Charts
+        run: |
+          if helm list -n monitoring | grep -q prometheus; then
+            echo "prometheus is installed. Uninstalling..."
+            helm uninstall prometheus -n monitoring --wait --timeout 10m
+          else
+            echo "prometheus is not installed. Skipping uninstall."
+          fi
+
+          if helm list -n monitoring | grep -q grafana; then
+            echo "grafana is installed. Uninstalling..."
+            helm uninstall grafana -n monitoring --wait --timeout 10m
+          else
+            echo "grafana is not installed. Skipping uninstall."
+          fi
+
+          if helm list -n argocd | grep -q argocd; then
+            echo "argocd is installed. Uninstalling..."
+            helm uninstall argocd -n argocd --wait --timeout 10m
+          else
+            echo "argocd is not installed. Skipping uninstall."
+          fi
+
+          if helm list -n external-dns | grep -q external-dns; then
+            echo "external-dns is installed. Uninstalling..."
+            helm uninstall external-dns -n external-dns --wait --timeout 10m
+          else
+            echo "external-dns is not installed. Skipping uninstall."
+          fi
+
+          if helm list -n ingress-nginx | grep -q ingress-nginx; then
+            echo "ingress-nginx is installed. Uninstalling..."
+            helm uninstall ingress-nginx -n ingress-nginx --wait --timeout 10m
+          else
+            echo "ingress-nginx is not installed. Skipping uninstall."
+          fi
+
   terraform-destroy-infrastructure:
     runs-on: ubuntu-latest
+    needs: [terraform-capture-output, uninstall-helm-charts]
 
     steps:
       - name: Checkout
