@@ -1,7 +1,14 @@
+configs:
+  params:
+    server.insecure: "true"
+    url: "argocd-dev-uat.ce10grp2.sctp-sandbox.com" 
 server:
   ingress:
     enabled: true
     annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
       external-dns.alpha.kubernetes.io/hostname: "argocd-dev-uat.ce10grp2.sctp-sandbox.com"
-    hostname: "argocd-dev-uat.ce10grp2.sctp-sandbox.com"
     ingressClassName: "nginx"
+    hosts:
+      - "argocd-dev-uat.ce10grp2.sctp-sandbox.com"
+    tls: []
