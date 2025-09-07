@@ -82,18 +82,11 @@ jobs:
 
       - name: Uninstall Helm Charts
         run: |
-          if helm list -n monitoring | grep -q prometheus; then
-            echo "prometheus is installed. Uninstalling..."
-            helm uninstall prometheus -n monitoring --wait --timeout 10m
+          if helm list -n monitoring | grep -q kube-prometheus-stack; then
+            echo "kube-prometheus-stack is installed. Uninstalling..."
+            helm uninstall kube-prometheus-stack -n monitoring --wait --timeout 10m
           else
-            echo "prometheus is not installed. Skipping uninstall."
-          fi
-
-          if helm list -n monitoring | grep -q grafana; then
-            echo "grafana is installed. Uninstalling..."
-            helm uninstall grafana -n monitoring --wait --timeout 10m
-          else
-            echo "grafana is not installed. Skipping uninstall."
+            echo "kube-prometheus-stack is not installed. Skipping uninstall."
           fi
 
           if helm list -n argocd | grep -q argocd; then
