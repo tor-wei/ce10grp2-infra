@@ -11,8 +11,14 @@ module "eks" {
     coredns                = {}
     eks-pod-identity-agent = {}
     kube-proxy             = {}
-    vpc-cni                = {}
     aws-ebs-csi-driver     = {}
+    vpc-cni = {
+      settings = {
+        "WARM_ENI_TARGET" = "3"
+        "WARM_IP_TARGET"  = "10"
+        "MAX_PODS"        = "50"
+      }
+    }
   }
 
   cluster_endpoint_public_access           = true
