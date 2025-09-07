@@ -135,14 +135,14 @@ jobs:
           cd ecr && terraform init && terraform workspace select -or-create ${{ github.event.inputs.environment }}
           cd ../eks && terraform init && terraform workspace select -or-create ${{ github.event.inputs.environment }}
 
-      - name: Destroy EKS
-        working-directory: ./eks
+      - name: Destroy ECR
+        working-directory: ./ecr
         run: |
           terraform plan -destroy -var-file=env/${{ github.event.inputs.environment }}.tfvars
           terraform destroy -var-file=env/${{ github.event.inputs.environment }}.tfvars --auto-approve
 
-      - name: Destroy ECR
-        working-directory: ./ecr
+      - name: Destroy EKS
+        working-directory: ./eks
         run: |
           terraform plan -destroy -var-file=env/${{ github.event.inputs.environment }}.tfvars
           terraform destroy -var-file=env/${{ github.event.inputs.environment }}.tfvars --auto-approve
