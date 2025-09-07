@@ -132,7 +132,7 @@ jobs:
             --set provider.aws.zoneType=public \
             --set serviceAccount.create=true \
             --set serviceAccount.name=external-dns-sa \
-            --set txtOwnerId=torwei-cluster \
+            --set txtOwnerId=${{ needs.terraform-deploy-infrastructure.outputs.cluster_name }} \
             --set rbac.create=true \
             --set policy=sync
 
