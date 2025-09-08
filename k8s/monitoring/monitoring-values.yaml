@@ -16,7 +16,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: gp3-immediate
+          storageClassName: gp3-csi
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
