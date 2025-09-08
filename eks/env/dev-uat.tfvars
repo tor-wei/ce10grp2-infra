@@ -8,5 +8,5 @@ eks_node_desired_size  = 4
 eks_admin_users        = ["torwei.goh", "leoeric", "zacharykwek15", "mpatra93"]
 eks_developer_users    = ["aliasgharsh53"]
 eks_allowed_namespaces = ["ce10grp2-dev", "ce10grp2-uat"]
-app_api_ecr_name       = "ce10grp2-app/api"
-app_frontend_ecr_name  = "ce10grp2-app/frontend"
+app_api_ecr_name       = "ce10grp2-app-dev-uat/api"
+app_frontend_ecr_name  = "ce10grp2-app-dev-uat/frontend"
