@@ -13,11 +13,12 @@ module "eks" {
     kube-proxy             = {}
     aws-ebs-csi-driver     = {}
     vpc-cni = {
+      most_recent    = true
+      before_compute = true
       configuration_values = jsonencode({
         env = {
-          WARM_ENI_TARGET = "3"
-          WARM_IP_TARGET  = "10"
-          MAX_PODS        = "50"
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
         }
       })
     }
