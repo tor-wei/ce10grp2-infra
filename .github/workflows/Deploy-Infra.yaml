@@ -134,7 +134,7 @@ jobs:
             --set serviceAccount.name=external-dns-sa \
             --set txtOwnerId=${{ needs.terraform-deploy-infrastructure.outputs.cluster_name }} \
             --set rbac.create=true \
-            --set policy=sync
+            --set policy=upsert-only
 
   install-argo-cd:
     runs-on: ubuntu-latest
