@@ -185,6 +185,7 @@ jobs:
         if: ${{ github.event.inputs.environment == 'prod' }}
         run: |
           echo "Applying prod manifests"
+          kubectl apply -f gitops-repo/argocd/prod-project.yaml
           kubectl apply -f gitops-repo/argocd/prod-app.yaml
           echo "Successfully applied production changes."
 
