@@ -221,6 +221,3 @@ jobs:
             --namespace $MONITORING_NAMESPACE --create-namespace \
             -f ./k8s/monitoring/monitoring-values.yaml \
             --set grafana.adminPassword=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-
-      - name: Install Loki + Promtail
-        run: kubectl apply -f ./k8s/monitoring/loki-promtail.yaml
